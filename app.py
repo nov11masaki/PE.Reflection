@@ -11,7 +11,29 @@ app = Flask(__name__)
 
 # Gemini APIの設定
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-model = genai.GenerativeModel('gemini-pro')
+
+# 安全性設定を緩和
+safety_settings = [
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+        "threshold": "BLOCK_NONE"
+    }
+]
+
+# 最新のGeminiモデルを使用
+model = genai.GenerativeModel('gemini-1.5-flash', safety_settings=safety_settings)
 
 # 各単元の選択肢データ
 UNIT_DATA = {
@@ -135,6 +157,8 @@ def regenerate_options():
     unit = data.get('unit')
     category = data.get('category')  # "今日の課題", "できたこと", "次の課題"
     
+    print(f"[DEBUG] Unit: {unit}, Category: {category}")  # デバッグログ
+    
     prompt = f"""
 小学3年生の体育「{unit}」の授業で、{category}について、児童が選べる選択肢を5つ作成してください。
 
@@ -156,22 +180,27 @@ def regenerate_options():
 """
     
     try:
+        print(f"[DEBUG] Calling Gemini API...")
         response = model.generate_content(prompt)
+        print(f"[DEBUG] Response received: {response.text}")
+        
         # 行ごとに分割して番号を削除
         lines = response.text.strip().split('\n')
         new_options = []
         
+        import re
         for line in lines:
             # 数字とピリオド、スペースを削除
             cleaned = line.strip()
             if cleaned:
                 # "1. " や "1) " などの番号パターンを削除
-                import re
                 cleaned = re.sub(r'^\d+[\.\)]\s*', '', cleaned)
                 # 前後の引用符を削除
                 cleaned = cleaned.strip('"\'')
-                if cleaned:
+                if cleaned and len(cleaned) > 0:
                     new_options.append(cleaned)
+        
+        print(f"[DEBUG] Generated options: {new_options}")
         
         # 最低5つの選択肢がある場合のみ成功
         if len(new_options) >= 5:
@@ -180,11 +209,16 @@ def regenerate_options():
                 "options": new_options[:5]  # 最初の5つを使用
             })
         else:
+            error_msg = f"選択肢の生成に失敗しました（{len(new_options)}個しか生成できませんでした）"
+            print(f"[ERROR] {error_msg}")
             return jsonify({
                 "success": False,
-                "error": f"選択肢の生成に失敗しました（{len(new_options)}個しか生成できませんでした）"
+                "error": error_msg
             }), 500
     except Exception as e:
+        print(f"[ERROR] Exception occurred: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "success": False,
             "error": str(e)
