@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>体育の振り返り</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏃‍♂️ 体育の振り返り 🏃‍♀️</h1>
+            <p class="subtitle">今日の体育はどうだったかな？</p>
+        </header>
+
+        <main>
+            <!-- 単元選択 -->
+            <section class="section">
+                <h2>📚 今日の単元を選んでね</h2>
+                <div class="unit-buttons">
+                    {% for unit in units %}
+                    <button class="unit-btn" onclick="selectUnit('{{ unit }}')">{{ unit }}</button>
+                    {% endfor %}
+                </div>
+                <div id="selected-unit" class="selected-display"></div>
+            </section>
+
+            <!-- 今日の課題 -->
+            <section class="section" id="today-challenge-section" style="display: none;">
+                <h2>🎯 今日の課題</h2>
+                <p class="instruction">今日がんばりたかったことを選んでね（いくつでもOK）</p>
+                <div id="today-challenge-options" class="checkbox-group"></div>
+            </section>
+
+            <!-- できたこと -->
+            <section class="section" id="achieved-section" style="display: none;">
+                <h2>✨ できたこと</h2>
+                <p class="instruction">今日できるようになったことを選んでね（いくつでもOK）</p>
+                <div id="achieved-options" class="checkbox-group"></div>
+            </section>
+
+            <!-- 次の課題 -->
+            <section class="section" id="next-challenge-section" style="display: none;">
+                <h2>🚀 次の時間の課題</h2>
+                <p class="instruction">次の時間にがんばりたいことを選んでね（いくつでもOK）</p>
+                <div id="next-challenge-options" class="checkbox-group"></div>
+            </section>
+
+            <!-- 自由記述 -->
+            <section class="section" id="free-text-section" style="display: none;">
+                <h2>✏️ もっと書きたいこと</h2>
+                <p class="instruction">他に書きたいことがあれば書いてね（書かなくてもOK）</p>
+                <textarea id="free-text" rows="4" placeholder="例：友達と協力できて楽しかった！"></textarea>
+            </section>
+
+            <!-- 送信ボタン -->
+            <div id="submit-section" style="display: none;">
+                <button class="submit-btn" onclick="submitReflection()">振り返りを送る 📝</button>
+            </div>
+
+            <!-- 結果表示 -->
+            <section class="section" id="result-section" style="display: none;">
+                <h2>👏 先生からのコメント</h2>
+                <div id="teacher-comment" class="teacher-comment">
+                    <div class="loading">コメントを作成中...</div>
+                </div>
+                <button class="reset-btn" onclick="resetForm()">もう一度書く</button>
+            </section>
+        </main>
+
+        <footer>
+            <p>© 2025 体育振り返りアプリ</p>
+        </footer>
+    </div>
+
+    <script>
+        let currentUnit = '';
+        let optionsData = {};
+
+        // 単元を選択
+        function selectUnit(unit) {
+            currentUnit = unit;
+            
+            // 選択された単元を表示
+            document.getElementById('selected-unit').innerHTML = 
+                `<span class="badge">選択中: ${unit}</span>`;
+            
+            // 単元の選択肢を取得
+            fetch('/get_options', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ unit: unit })
+            })
+            .then(response => response.json())
+            .then(data => {
+                optionsData = data;
+                displayOptions();
+                showSections();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('エラーが発生しました');
+            });
+        }
+
+        // 選択肢を表示
+        function displayOptions() {
+            // 今日の課題
+            const todayChallengeDiv = document.getElementById('today-challenge-options');
+            todayChallengeDiv.innerHTML = '';
+            optionsData['今日の課題'].forEach((option, index) => {
+                todayChallengeDiv.innerHTML += `
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="today-challenge" value="${option}">
+                        <span>${option}</span>
+                    </label>
+                `;
+            });
+
+            // できたこと
+            const achievedDiv = document.getElementById('achieved-options');
+            achievedDiv.innerHTML = '';
+            optionsData['できたこと'].forEach((option, index) => {
+                achievedDiv.innerHTML += `
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="achieved" value="${option}">
+                        <span>${option}</span>
+                    </label>
+                `;
+            });
+
+            // 次の課題
+            const nextChallengeDiv = document.getElementById('next-challenge-options');
+            nextChallengeDiv.innerHTML = '';
+            optionsData['次の課題'].forEach((option, index) => {
+                nextChallengeDiv.innerHTML += `
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="next-challenge" value="${option}">
+                        <span>${option}</span>
+                    </label>
+                `;
+            });
+        }
+
+        // セクションを表示
+        function showSections() {
+            document.getElementById('today-challenge-section').style.display = 'block';
+            document.getElementById('achieved-section').style.display = 'block';
+            document.getElementById('next-challenge-section').style.display = 'block';
+            document.getElementById('free-text-section').style.display = 'block';
+            document.getElementById('submit-section').style.display = 'block';
+            document.getElementById('result-section').style.display = 'none';
+        }
+
+        // 選択された項目を取得
+        function getSelectedValues(name) {
+            const checkboxes = document.querySelectorAll(`input[name="${name}"]:checked`);
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        // 振り返りを送信
+        function submitReflection() {
+            const todayChallenge = getSelectedValues('today-challenge');
+            const achieved = getSelectedValues('achieved');
+            const nextChallenge = getSelectedValues('next-challenge');
+            const freeText = document.getElementById('free-text').value;
+
+            // 最低1つは選択されているかチェック
+            if (todayChallenge.length === 0 && achieved.length === 0 && nextChallenge.length === 0) {
+                alert('少なくとも1つは選んでね！');
+                return;
+            }
+
+            // 結果セクションを表示
+            document.getElementById('result-section').style.display = 'block';
+            document.getElementById('teacher-comment').innerHTML = 
+                '<div class="loading">コメントを作成中...</div>';
+
+            // スクロール
+            document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+
+            // Gemini APIでコメント生成
+            fetch('/generate_reflection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    unit: currentUnit,
+                    today_challenge: todayChallenge,
+                    achieved: achieved,
+                    next_challenge: nextChallenge,
+                    free_text: freeText
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('teacher-comment').innerHTML = 
+                        `<p class="comment-text">${data.comment}</p>`;
+                    
+                    // 保存
+                    saveReflection({
+                        unit: currentUnit,
+                        today_challenge: todayChallenge,
+                        achieved: achieved,
+                        next_challenge: nextChallenge,
+                        free_text: freeText,
+                        ai_comment: data.comment,
+                        timestamp: new Date().toISOString()
+                    });
+                } else {
+                    document.getElementById('teacher-comment').innerHTML = 
+                        `<p class="error">エラーが発生しました: ${data.error}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('teacher-comment').innerHTML = 
+                    '<p class="error">エラーが発生しました</p>';
+            });
+        }
+
+        // 振り返りを保存
+        function saveReflection(data) {
+            fetch('/save_reflection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log('保存しました:', result);
+            })
+            .catch(error => {
+                console.error('保存エラー:', error);
+            });
+        }
+
+        // フォームをリセット
+        function resetForm() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>
