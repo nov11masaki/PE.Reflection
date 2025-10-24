@@ -211,7 +211,8 @@
                 },
                 body: JSON.stringify({
                     unit: currentUnit,
-                    category: category
+                    category: category,
+                    selected_items: selectedItems[fieldName]  // 選択済み項目を送信
                 })
             })
             .then(response => response.json())

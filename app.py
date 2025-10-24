@@ -156,25 +156,33 @@ def regenerate_options():
     data = request.json
     unit = data.get('unit')
     category = data.get('category')  # "今日の課題", "できたこと", "次の課題"
+    selected_items = data.get('selected_items', [])  # 既に選択されている項目
     
     print(f"[DEBUG] Unit: {unit}, Category: {category}")  # デバッグログ
+    print(f"[DEBUG] Selected items: {selected_items}")  # デバッグログ
+    
+    # 既に選択されている項目を除外して、必要な新しい選択肢の数を計算
+    num_new_options = max(5 - len(selected_items), 3)  # 最低3つの新しい選択肢を生成
     
     prompt = f"""
-小学3年生の体育「{unit}」の授業で、{category}について、児童が選べる選択肢を5つ作成してください。
+小学3年生の体育「{unit}」の授業で、{category}について、児童が選べる選択肢を{num_new_options}つ作成してください。
 
 要件:
 1. 小学3年生にわかりやすい表現
 2. 具体的で選びやすい内容
 3. {unit}に適した内容
 4. 簡潔な表現（15文字以内）
-5. リスト形式で5つ
+5. リスト形式で{num_new_options}つ
+
+{"以下の項目は既に選択されているため、これらとは異なる選択肢を作成してください:" if selected_items else ""}
+{chr(10).join(f"- {item}" for item in selected_items) if selected_items else ""}
 
 必ず以下の形式で出力してください:
 1. 選択肢1
 2. 選択肢2
 3. 選択肢3
-4. 選択肢4
-5. 選択肢5
+{"4. 選択肢4" if num_new_options >= 4 else ""}
+{"5. 選択肢5" if num_new_options >= 5 else ""}
 
 注意: 番号と選択肢のみを出力し、他の説明は不要です。
 """
@@ -200,16 +208,25 @@ def regenerate_options():
                 if cleaned and len(cleaned) > 0:
                     new_options.append(cleaned)
         
-        print(f"[DEBUG] Generated options: {new_options}")
+        print(f"[DEBUG] Generated new options: {new_options}")
         
-        # 最低5つの選択肢がある場合のみ成功
-        if len(new_options) >= 5:
+        # 既に選択されている項目を先頭に追加
+        final_options = selected_items + new_options
+        
+        # 重複を削除しつつ順序を保持
+        seen = set()
+        final_options = [x for x in final_options if not (x in seen or seen.add(x))]
+        
+        print(f"[DEBUG] Final options (with selected): {final_options}")
+        
+        # 最低3つの選択肢がある場合のみ成功（選択済み含む）
+        if len(final_options) >= 3:
             return jsonify({
                 "success": True,
-                "options": new_options[:5]  # 最初の5つを使用
+                "options": final_options[:8]  # 最大8つまで表示
             })
         else:
-            error_msg = f"選択肢の生成に失敗しました（{len(new_options)}個しか生成できませんでした）"
+            error_msg = f"選択肢の生成に失敗しました（{len(final_options)}個しか生成できませんでした）"
             print(f"[ERROR] {error_msg}")
             return jsonify({
                 "success": False,
