@@ -33,7 +33,7 @@ safety_settings = [
 ]
 
 # 最新のGeminiモデルを使用
-model = genai.GenerativeModel('gemini-1.5-flash', safety_settings=safety_settings)
+model = genai.GenerativeModel('gemini-1.5-flash-latest', safety_settings=safety_settings)
 
 # 各単元の選択肢データ
 UNIT_DATA = {
