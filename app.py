@@ -142,28 +142,47 @@ def regenerate_options():
 1. 小学3年生にわかりやすい表現
 2. 具体的で選びやすい内容
 3. {unit}に適した内容
-4. 簡潔な表現（10文字以内）
+4. 簡潔な表現（15文字以内）
 5. リスト形式で5つ
 
-出力形式（JSON配列で出力してください）:
-["選択肢1", "選択肢2", "選択肢3", "選択肢4", "選択肢5"]
+必ず以下の形式で出力してください:
+1. 選択肢1
+2. 選択肢2
+3. 選択肢3
+4. 選択肢4
+5. 選択肢5
+
+注意: 番号と選択肢のみを出力し、他の説明は不要です。
 """
     
     try:
         response = model.generate_content(prompt)
-        # JSONとして解析
-        import re
-        json_match = re.search(r'\[.*\]', response.text, re.DOTALL)
-        if json_match:
-            new_options = json.loads(json_match.group())
+        # 行ごとに分割して番号を削除
+        lines = response.text.strip().split('\n')
+        new_options = []
+        
+        for line in lines:
+            # 数字とピリオド、スペースを削除
+            cleaned = line.strip()
+            if cleaned:
+                # "1. " や "1) " などの番号パターンを削除
+                import re
+                cleaned = re.sub(r'^\d+[\.\)]\s*', '', cleaned)
+                # 前後の引用符を削除
+                cleaned = cleaned.strip('"\'')
+                if cleaned:
+                    new_options.append(cleaned)
+        
+        # 最低5つの選択肢がある場合のみ成功
+        if len(new_options) >= 5:
             return jsonify({
                 "success": True,
-                "options": new_options
+                "options": new_options[:5]  # 最初の5つを使用
             })
         else:
             return jsonify({
                 "success": False,
-                "error": "選択肢の生成に失敗しました"
+                "error": f"選択肢の生成に失敗しました（{len(new_options)}個しか生成できませんでした）"
             }), 500
     except Exception as e:
         return jsonify({
