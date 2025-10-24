@@ -93,6 +93,35 @@ main {
     transform: translateY(-1px);
 }
 
+/* 再生成ボタン */
+.regenerate-btn {
+    padding: 10px 20px;
+    font-size: 1em;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 10px rgba(67, 233, 123, 0.3);
+}
+
+.regenerate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(67, 233, 123, 0.4);
+}
+
+.regenerate-btn:active {
+    transform: translateY(0);
+}
+
+.regenerate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .selected-display {
     text-align: center;
     margin-top: 15px;

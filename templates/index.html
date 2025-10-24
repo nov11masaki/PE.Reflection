@@ -27,21 +27,30 @@
 
             <!-- 今日の課題 -->
             <section class="section" id="today-challenge-section" style="display: none;">
-                <h2>🎯 今日の課題</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2>🎯 今日の課題</h2>
+                    <button class="regenerate-btn" onclick="regenerateOptions('今日の課題', 'today-challenge')">🔄 他の選択肢</button>
+                </div>
                 <p class="instruction">今日がんばりたかったことを選んでね（いくつでもOK）</p>
                 <div id="today-challenge-options" class="checkbox-group"></div>
             </section>
 
             <!-- できたこと -->
             <section class="section" id="achieved-section" style="display: none;">
-                <h2>✨ できたこと</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2>✨ できたこと</h2>
+                    <button class="regenerate-btn" onclick="regenerateOptions('できたこと', 'achieved')">🔄 他の選択肢</button>
+                </div>
                 <p class="instruction">今日できるようになったことを選んでね（いくつでもOK）</p>
                 <div id="achieved-options" class="checkbox-group"></div>
             </section>
 
             <!-- 次の課題 -->
             <section class="section" id="next-challenge-section" style="display: none;">
-                <h2>🚀 次の時間の課題</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2>🚀 次の時間の課題</h2>
+                    <button class="regenerate-btn" onclick="regenerateOptions('次の課題', 'next-challenge')">🔄 他の選択肢</button>
+                </div>
                 <p class="instruction">次の時間にがんばりたいことを選んでね（いくつでもOK）</p>
                 <div id="next-challenge-options" class="checkbox-group"></div>
             </section>
@@ -152,6 +161,59 @@
             document.getElementById('free-text-section').style.display = 'block';
             document.getElementById('submit-section').style.display = 'block';
             document.getElementById('result-section').style.display = 'none';
+        }
+
+        // 選択肢を再生成
+        function regenerateOptions(category, fieldName) {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '⏳ 生成中...';
+            button.disabled = true;
+
+            fetch('/regenerate_options', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    unit: currentUnit,
+                    category: category
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 新しい選択肢でデータを更新
+                    optionsData[category] = data.options;
+                    
+                    // 表示を更新
+                    const divId = fieldName + '-options';
+                    const div = document.getElementById(divId);
+                    div.innerHTML = '';
+                    
+                    data.options.forEach((option, index) => {
+                        div.innerHTML += `
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="${fieldName}" value="${option}">
+                                <span>${option}</span>
+                            </label>
+                        `;
+                    });
+                    
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                } else {
+                    alert('選択肢の生成に失敗しました');
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('エラーが発生しました');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
         }
 
         // 選択された項目を取得

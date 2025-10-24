@@ -128,6 +128,50 @@ def get_options():
         return jsonify({"error": "単元が見つかりません"}), 404
 
 
+@app.route('/regenerate_options', methods=['POST'])
+def regenerate_options():
+    """当てはまる選択肢がない場合、AIで新しい選択肢を生成"""
+    data = request.json
+    unit = data.get('unit')
+    category = data.get('category')  # "今日の課題", "できたこと", "次の課題"
+    
+    prompt = f"""
+小学3年生の体育「{unit}」の授業で、{category}について、児童が選べる選択肢を5つ作成してください。
+
+要件:
+1. 小学3年生にわかりやすい表現
+2. 具体的で選びやすい内容
+3. {unit}に適した内容
+4. 簡潔な表現（10文字以内）
+5. リスト形式で5つ
+
+出力形式（JSON配列で出力してください）:
+["選択肢1", "選択肢2", "選択肢3", "選択肢4", "選択肢5"]
+"""
+    
+    try:
+        response = model.generate_content(prompt)
+        # JSONとして解析
+        import re
+        json_match = re.search(r'\[.*\]', response.text, re.DOTALL)
+        if json_match:
+            new_options = json.loads(json_match.group())
+            return jsonify({
+                "success": True,
+                "options": new_options
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "選択肢の生成に失敗しました"
+            }), 500
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 @app.route('/generate_reflection', methods=['POST'])
 def generate_reflection():
     """Gemini APIを使用して振り返りのアドバイスを生成"""
@@ -224,4 +268,4 @@ def save_reflection():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)
