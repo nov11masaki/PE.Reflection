@@ -164,6 +164,26 @@ main {
     box-shadow: 0 4px 10px rgba(102, 126, 234, 0.2);
 }
 
+/* 選択された項目のスタイル */
+.checkbox-label.selected {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+    transform: scale(1.02);
+    box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+}
+
+.checkbox-label.selected span {
+    color: white;
+    font-weight: bold;
+}
+
+.checkbox-label.selected:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+}
+
 .checkbox-label input[type="checkbox"] {
     width: 24px;
     height: 24px;

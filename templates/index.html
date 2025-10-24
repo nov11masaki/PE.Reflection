@@ -85,10 +85,22 @@
     <script>
         let currentUnit = '';
         let optionsData = {};
+        let selectedItems = {
+            'today-challenge': [],
+            'achieved': [],
+            'next-challenge': []
+        };
 
         // 単元を選択
         function selectUnit(unit) {
             currentUnit = unit;
+            
+            // 選択をリセット
+            selectedItems = {
+                'today-challenge': [],
+                'achieved': [],
+                'next-challenge': []
+            };
             
             // 選択された単元を表示
             document.getElementById('selected-unit').innerHTML = 
@@ -114,15 +126,22 @@
             });
         }
 
-        // 選択肢を表示
+        // 現在の選択状態を保存
+        function saveCurrentSelections(fieldName) {
+            const checkboxes = document.querySelectorAll(`input[name="${fieldName}"]:checked`);
+            selectedItems[fieldName] = Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        // 選択肢を表示（選択状態を保持）
         function displayOptions() {
             // 今日の課題
             const todayChallengeDiv = document.getElementById('today-challenge-options');
             todayChallengeDiv.innerHTML = '';
             optionsData['今日の課題'].forEach((option, index) => {
+                const isChecked = selectedItems['today-challenge'].includes(option) ? 'checked' : '';
                 todayChallengeDiv.innerHTML += `
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="today-challenge" value="${option}">
+                    <label class="checkbox-label ${isChecked ? 'selected' : ''}">
+                        <input type="checkbox" name="today-challenge" value="${option}" ${isChecked} onchange="updateSelectionDisplay(this)">
                         <span>${option}</span>
                     </label>
                 `;
@@ -132,9 +151,10 @@
             const achievedDiv = document.getElementById('achieved-options');
             achievedDiv.innerHTML = '';
             optionsData['できたこと'].forEach((option, index) => {
+                const isChecked = selectedItems['achieved'].includes(option) ? 'checked' : '';
                 achievedDiv.innerHTML += `
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="achieved" value="${option}">
+                    <label class="checkbox-label ${isChecked ? 'selected' : ''}">
+                        <input type="checkbox" name="achieved" value="${option}" ${isChecked} onchange="updateSelectionDisplay(this)">
                         <span>${option}</span>
                     </label>
                 `;
@@ -144,13 +164,24 @@
             const nextChallengeDiv = document.getElementById('next-challenge-options');
             nextChallengeDiv.innerHTML = '';
             optionsData['次の課題'].forEach((option, index) => {
+                const isChecked = selectedItems['next-challenge'].includes(option) ? 'checked' : '';
                 nextChallengeDiv.innerHTML += `
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="next-challenge" value="${option}">
+                    <label class="checkbox-label ${isChecked ? 'selected' : ''}">
+                        <input type="checkbox" name="next-challenge" value="${option}" ${isChecked} onchange="updateSelectionDisplay(this)">
                         <span>${option}</span>
                     </label>
                 `;
             });
+        }
+
+        // 選択表示を更新
+        function updateSelectionDisplay(checkbox) {
+            const label = checkbox.parentElement;
+            if (checkbox.checked) {
+                label.classList.add('selected');
+            } else {
+                label.classList.remove('selected');
+            }
         }
 
         // セクションを表示
@@ -170,6 +201,9 @@
             button.innerHTML = '⏳ 生成中...';
             button.disabled = true;
 
+            // 現在の選択を保存
+            saveCurrentSelections(fieldName);
+
             fetch('/regenerate_options', {
                 method: 'POST',
                 headers: {
@@ -186,15 +220,16 @@
                     // 新しい選択肢でデータを更新
                     optionsData[category] = data.options;
                     
-                    // 表示を更新
+                    // 表示を更新（選択状態を保持）
                     const divId = fieldName + '-options';
                     const div = document.getElementById(divId);
                     div.innerHTML = '';
                     
                     data.options.forEach((option, index) => {
+                        const isChecked = selectedItems[fieldName].includes(option) ? 'checked' : '';
                         div.innerHTML += `
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="${fieldName}" value="${option}">
+                            <label class="checkbox-label ${isChecked ? 'selected' : ''}">
+                                <input type="checkbox" name="${fieldName}" value="${option}" ${isChecked} onchange="updateSelectionDisplay(this)">
                                 <span>${option}</span>
                             </label>
                         `;
