@@ -2,38 +2,15 @@ import os
 import json
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
-import google.generativeai as genai
+from openai import OpenAI
 
 # 環境変数を読み込む
 load_dotenv()
 
 app = Flask(__name__)
 
-# Gemini APIの設定
-genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-
-# 安全性設定を緩和
-safety_settings = [
-    {
-        "category": "HARM_CATEGORY_HARASSMENT",
-        "threshold": "BLOCK_NONE"
-    },
-    {
-        "category": "HARM_CATEGORY_HATE_SPEECH",
-        "threshold": "BLOCK_NONE"
-    },
-    {
-        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-        "threshold": "BLOCK_NONE"
-    },
-    {
-        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-        "threshold": "BLOCK_NONE"
-    }
-]
-
-# 最新のGeminiモデルを使用
-model = genai.GenerativeModel('gemini-2.0-flash', safety_settings=safety_settings)
+# OpenAI APIの設定
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # 各単元の選択肢データ
 UNIT_DATA = {
@@ -188,12 +165,21 @@ def regenerate_options():
 """
     
     try:
-        print(f"[DEBUG] Calling Gemini API...")
-        response = model.generate_content(prompt)
-        print(f"[DEBUG] Response received: {response.text}")
+        print(f"[DEBUG] Calling OpenAI API...")
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "あなたは小学3年生向けの体育学習支援アシスタントです。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.8,
+            max_tokens=200
+        )
+        response_text = response.choices[0].message.content
+        print(f"[DEBUG] Response received: {response_text}")
         
         # 行ごとに分割して番号を削除
-        lines = response.text.strip().split('\n')
+        lines = response_text.strip().split('\n')
         new_options = []
         
         import re
@@ -311,9 +297,17 @@ def generate_reflection():
 """
     
     try:
-        # Gemini APIを使用してコメント生成
-        response = model.generate_content(prompt)
-        comment = response.text
+        # OpenAI APIを使用してコメント生成
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "あなたは小学3年生の体育学習を支援する先生です。児童の振り返りに対して、温かく受け止めつつ、次の学習につながる具体的なアドバイスをしてください。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=300
+        )
+        comment = response.choices[0].message.content
         
         return jsonify({
             "success": True,
@@ -356,4 +350,4 @@ def save_reflection():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    app.run(debug=True, host='0.0.0.0', port=5004)
